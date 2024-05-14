@@ -1,0 +1,140 @@
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+
+:root {
+    --primary-color: #023047;
+    --fg-color: #fcfcfc;
+}
+
+* {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    font-family: 'Lucida Sans';
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f2f2f2;
+    height: 100vh;
+}
+
+.posts-container {
+    max-width: 1024px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    row-gap: 2rem;
+}
+
+.post {
+    background-color: #f9f9f9;
+    width: 80%;
+    border-radius: .5rem;
+    padding: 1rem;
+    box-shadow: 1px 2px 5px 2px #ddd;
+    display: flex;
+    column-gap: 1rem;
+    cursor: pointer;
+    transition: box-shadow .2s ease-in-out;
+}
+
+.post:hover img {
+    transform: scale(1.25);
+}
+
+.post:hover {
+    box-shadow: 1px 2px 8px 4px #ddd;
+}
+
+.post-img {
+    min-width: 200px;
+    min-height: 200px;
+    overflow: hidden;
+    border-radius: .5rem;
+}
+
+.post-img img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform .2s ease-in-out;
+    transform-origin: center;
+}
+
+.post-content {
+    display: flex;
+    flex-direction: column;
+    row-gap: 1rem;
+    justify-content: flex-start;
+    align-items: flex-start;
+}
+
+.post-content > * {
+    width: 100%;
+}
+
+.post-header {
+    display: flex;
+    justify-content: space-between;
+}
+
+.post-footer {
+    margin-top: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.post-title, .post-footer {
+    font-family: Verdana;
+}
+
+.post-title p {
+    font-size: 0.8rem;
+    font-style: italic;
+}
+
+.post-header i {
+    color: var(--primary-color);
+    transition: all .2s ease-in-out;
+    font-size: 1.2rem;
+}
+
+.post-header i:hover {
+    text-shadow: 0px 0px 2px #999;
+}
+
+.post-main {
+    font-family: Helvetica;
+    line-height: 1.2rem;
+}
+
+.post-footer a {
+    font-size: 0.8rem;
+    text-decoration: none;
+    color: var(--primary-color);
+}
+
+.post-footer a:not(.post-read-more):hover {
+    text-decoration: underline;
+}
+
+.post-footer a.post-read-more {
+    padding: 4px 8px;
+    transition: all .3s ease-in-out;
+    border-radius: 0.2rem;
+}
+
+.post-footer a.post-read-more:hover {
+    background-color: var(--primary-color);
+    color: var(--fg-color);
+}
+
+.post-main p {
+    max-height: 80px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
