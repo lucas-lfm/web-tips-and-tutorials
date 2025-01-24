@@ -1,0 +1,54 @@
+* {
+    box-sizing: border-box;
+    padding: 0;
+    margin: 0;
+}
+
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-image: linear-gradient(225deg, #0000a8, #00004f);
+    font-family: 'Fira Code', serif;
+    color: #f2f2f2;
+}
+
+.msg {
+    font-size: 3rem;
+    font-weight: 700;
+    border-right: 4px solid #00FFFF;
+    width: 22ch;
+    overflow: hidden;
+    white-space: nowrap;
+    animation: blinkMarker 0.5s infinite, 
+                typing 5s infinite steps(22);
+}
+
+.msg span {
+    color: #00FFFF;
+}
+
+@keyframes blinkMarker {
+    50% {
+        border-right-color: transparent;
+    }
+}
+
+@keyframes typing {
+    0% {
+        width: 0;
+    }
+
+    40% {
+        width: 22ch;
+    }
+
+    60% {
+        width: 22ch;
+    }
+
+    100% {
+        width: 0;
+    }
+}

@@ -1,0 +1,18 @@
+.container {
+    border: 2px solid dodgerblue;
+    padding: 8px;
+    display: flex;
+    justify-content: center;
+    column-gap: 5px;
+    height: 600px;
+    align-items: stretch;
+    flex-direction: column-reverse;
+}
+
+.item {
+    font-size: 3rem;
+    padding: 8px 16px;
+    background-color: #242424;
+    color: white;
+    border-radius: 4px;
+}
