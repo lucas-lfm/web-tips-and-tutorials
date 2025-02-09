@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Tetris com HTML, CSS e JavaScript</title>
+  <style>
+    /* Estilização básica da página e do canvas */
+    body {
+      background: #000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      position: relative;
+      font-family: Arial, sans-serif;
+    }
+    canvas {
+      border: 2px solid #fff;
+      background: #222;
+    }
+    /* Placar de pontos */
+    #score {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: #fff;
+      font-size: 20px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Elemento canvas onde o jogo será desenhado -->
+  <canvas id="tetris" width="300" height="600"></canvas>
+  <!-- Elemento para exibir a pontuação -->
+  <div id="score">Pontos: 0</div>
+  
+  <script>
+    // Tamanho de cada bloco em pixels (usado para escalar o canvas)
+    const blockSize = 30;
+    // Dimensões do tabuleiro (10 colunas x 20 linhas)
+    const COLS = 10;
+    const ROWS = 20;
+
+    // Mapeamento de números para cores (cada tetromino terá um número e cor associados)
+    const colors = [
+      null,
+      'purple',  // T
+      'yellow',  // O
+      'orange',  // L
+      'blue',    // J
+      'cyan',    // I
+      'green',   // S
+      'red'      // Z
+    ];
+
+    // Definição dos Tetrominoes: cada peça é definida por uma matriz (números diferentes de 0 representam blocos)
+    const tetrominoes = {
+      T: {
+        shape: [
+          [0, 1, 0],
+          [1, 1, 1]
+        ]
+      },
+      O: {
+        shape: [
+          [2, 2],
+          [2, 2]
+        ]
+      },
+      L: {
+        shape: [
+          [0, 0, 3],
+          [3, 3, 3]
+        ]
+      },
+      J: {
+        shape: [
+          [4, 0, 0],
+          [4, 4, 4]
+        ]
+      },
+      I: {
+        shape: [
+          [0, 5, 0, 0],
+          [0, 5, 0, 0],
+          [0, 5, 0, 0],
+          [0, 5, 0, 0]
+        ]
+      },
+      S: {
+        shape: [
+          [0, 6, 6],
+          [6, 6, 0]
+        ]
+      },
+      Z: {
+        shape: [
+          [7, 7, 0],
+          [0, 7, 7]
+        ]
+      }
+    };
+
+    // Cria uma matriz (array bidimensional) preenchida com zeros
+    function createMatrix(w, h) {
+      const matrix = [];
+      while (h--) {
+        matrix.push(new Array(w).fill(0));
+      }
+      return matrix;
+    }
+
+    // O "arena" é o tabuleiro do jogo (matriz de 10x20)
+    const arena = createMatrix(COLS, ROWS);
+
+    // Objeto que representa o jogador (peça atual, posição e pontuação)
+    const player = {
+      pos: { x: 0, y: 0 },
+      matrix: null,
+      score: 0
+    };
+
+    // Função que cria uma cópia da matriz de uma peça
+    function createPiece(type) {
+      // Usamos o valor definido em tetrominoes para criar a matriz da peça
+      return tetrominoes[type].shape.map(row => row.slice());
+    }
+
+    // Reseta o jogador: gera uma nova peça aleatória e posiciona-a no topo do tabuleiro
+    function playerReset() {
+      const pieces = 'TOLJISZ'; // Cada letra representa um tipo de peça
+      const type = pieces[Math.floor(Math.random() * pieces.length)];
+      player.matrix = createPiece(type);
+      // Posiciona a peça horizontalmente no centro
+      player.pos.y = 0;
+      player.pos.x = Math.floor(arena[0].length / 2) - Math.floor(player.matrix[0].length / 2);
+      // Se houver colisão imediatamente após o reset, significa que o tabuleiro está cheio (Game Over)
+      if (collide(arena, player)) {
+        arena.forEach(row => row.fill(0));
+        player.score = 0;
+        updateScore();
+      }
+    }
+
+    // Verifica se a peça do jogador colide com blocos já fixos no arena ou com as bordas
+    function collide(arena, player) {
+      const m = player.matrix;
+      const o = player.pos;
+      for (let y = 0; y < m.length; ++y) {
+        for (let x = 0; x < m[y].length; ++x) {
+          if (m[y][x] !== 0 &&
+              (arena[y + o.y] && arena[y + o.y][x + o.x]) !== 0) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+
+    // Mescla a peça do jogador no arena quando ela não pode mais descer
+    function merge(arena, player) {
+      player.matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) {
+            arena[y + player.pos.y][x + player.pos.x] = value;
+          }
+        });
+      });
+    }
+
+    // Rotaciona a matriz da peça (clockwise se dir > 0, anti-clockwise se dir < 0)
+    function rotate(matrix, dir) {
+      for (let y = 0; y < matrix.length; ++y) {
+        for (let x = 0; x < y; ++x) {
+          [matrix[x][y], matrix[y][x]] = [matrix[y][x], matrix[x][y]];
+        }
+      }
+      if (dir > 0) {
+        matrix.forEach(row => row.reverse());
+      } else {
+        matrix.reverse();
+      }
+    }
+
+    // Verifica e limpa linhas completas, atualizando a pontuação
+    function arenaSweep() {
+      outer: for (let y = arena.length - 1; y >= 0; --y) {
+        for (let x = 0; x < arena[y].length; ++x) {
+          if (arena[y][x] === 0) {
+            continue outer;
+          }
+        }
+        const row = arena.splice(y, 1)[0].fill(0);
+        arena.unshift(row);
+        ++y;
+        player.score += 10;
+        updateScore();
+      }
+    }
+
+    // Configuração do canvas e seu contexto
+    const canvas = document.getElementById('tetris');
+    const context = canvas.getContext('2d');
+    // Escala o desenho: cada "unidade" será blockSize pixels
+    context.scale(blockSize, blockSize);
+
+    // Função para desenhar uma matriz (seja a peça ou o arena)
+    function drawMatrix(matrix, offset) {
+      matrix.forEach((row, y) => {
+        row.forEach((value, x) => {
+          if (value !== 0) {
+            context.fillStyle = colors[value];
+            context.fillRect(x + offset.x, y + offset.y, 1, 1);
+            context.strokeStyle = '#000';
+            context.lineWidth = 0.05;
+            context.strokeRect(x + offset.x, y + offset.y, 1, 1);
+          }
+        });
+      });
+    }
+
+    // Função que redesenha todo o jogo
+    function draw() {
+      // Limpa o canvas desenhando um retângulo de fundo
+      context.fillStyle = '#222';
+      context.fillRect(0, 0, canvas.width / blockSize, canvas.height / blockSize);
+
+      // Desenha o arena (peças já fixadas)
+      drawMatrix(arena, { x: 0, y: 0 });
+      // Desenha a peça que está em movimento
+      drawMatrix(player.matrix, player.pos);
+    }
+
+    // Variáveis para controlar a queda automática da peça
+    let dropCounter = 0;
+    const dropInterval = 1000; // intervalo em milissegundos
+
+    let lastTime = 0;
+    // Função principal do loop do jogo
+    function update(time = 0) {
+      const deltaTime = time - lastTime;
+      lastTime = time;
+      dropCounter += deltaTime;
+      if (dropCounter > dropInterval) {
+        playerDrop();
+      }
+      draw();
+      requestAnimationFrame(update);
+    }
+
+    // Move a peça para baixo; se houver colisão, mescla-a ao arena e gera uma nova peça
+    function playerDrop() {
+      player.pos.y++;
+      if (collide(arena, player)) {
+        player.pos.y--;
+        merge(arena, player);
+        playerReset();
+        arenaSweep();
+      }
+      dropCounter = 0;
+    }
+
+    // Move a peça para a esquerda ou direita
+    function playerMove(offset) {
+      player.pos.x += offset;
+      if (collide(arena, player)) {
+        player.pos.x -= offset;
+      }
+    }
+
+    // Rotaciona a peça; ajusta a posição caso a rotação cause colisão com as bordas
+    function playerRotate(dir) {
+      const pos = player.pos.x;
+      let offset = 1;
+      rotate(player.matrix, dir);
+      while (collide(arena, player)) {
+        player.pos.x += offset;
+        offset = -(offset + (offset > 0 ? 1 : -1));
+        if (offset > player.matrix[0].length) {
+          rotate(player.matrix, -dir);
+          player.pos.x = pos;
+          return;
+        }
+      }
+    }
+
+    // Atualiza o elemento de pontuação
+    function updateScore() {
+      document.getElementById('score').innerText = 'Pontos: ' + player.score;
+    }
+
+    // Captura os eventos do teclado para movimentar e rotacionar a peça
+    document.addEventListener('keydown', event => {
+      if (event.key === 'ArrowLeft') {
+        playerMove(-1);
+      } else if (event.key === 'ArrowRight') {
+        playerMove(1);
+      } else if (event.key === 'ArrowDown') {
+        playerDrop();
+      } else if (event.key === 'ArrowUp' || event.key.toLowerCase() === 'w') {
+        playerRotate(1);
+      } else if (event.key.toLowerCase() === 'q') {
+        playerRotate(-1);
+      }
+    });
+
+    // Inicializa o jogo
+    playerReset();
+    updateScore();
+    update();
+  </script>
+</body>
+</html>

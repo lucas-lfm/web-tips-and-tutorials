@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Jogo Educacional: Árvore Binária</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    canvas {
+      background-color: #fff;
+      border: 2px solid #333;
+      margin: 10px auto;
+      display: block;
+    }
+    #message {
+      font-size: 1.2em;
+      color: #d00;
+      margin-top: 10px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 1em;
+      margin: 10px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h1>Jogo Educacional: Árvore Binária</h1>
+  <p>Insira o valor <strong id="targetValue">?</strong> na árvore de busca binária, clicando no local correto.</p>
+  <canvas id="treeCanvas" width="800" height="600"></canvas>
+  <p id="message"></p>
+  <button id="startButton">Iniciar Jogo</button>
+  <button id="resetButton">Reiniciar</button>
+
+  <script>
+    // ===============================
+    // Variáveis e configurações globais
+    // ===============================
+    let canvas, ctx;
+    let tree = null;          // árvore BST
+    let currentTarget = null; // valor a ser inserido na rodada
+    let currentInsertionSpot = null; // objeto com os dados do spot correto para inserção
+    const verticalSpacing = 80;  // distância vertical entre níveis
+    const nodeRadius = 20;       // raio dos círculos que representam os nós
+    let gameStarted = false;
+
+    // ===============================
+    // Funções para a árvore BST
+    // ===============================
+
+    // Cria um novo nó
+    function newNode(value) {
+      return { value: value, left: null, right: null };
+    }
+
+    // Insere um nó na árvore (usado para construir a árvore inicial)
+    function insertNode(root, value) {
+      if (!root) {
+        return newNode(value);
+      }
+      if (value < root.value) {
+        root.left = insertNode(root.left, value);
+      } else if (value > root.value) {
+        root.right = insertNode(root.right, value);
+      }
+      return root;
+    }
+
+    // Verifica se a árvore contém determinado valor
+    function treeContains(node, value) {
+      if (!node) return false;
+      if (node.value === value) return true;
+      return (value < node.value)
+              ? treeContains(node.left, value)
+              : treeContains(node.right, value);
+    }
+
+    // ===============================
+    // Cálculo das posições para exibição da árvore
+    // ===============================
+    // Define, recursivamente, as posições (x, y) e o nível de cada nó
+    function computePositions(node, x, y, level) {
+      node.x = x;
+      node.y = y;
+      node.level = level;
+      if (node.left) {
+        let offset = canvas.width / Math.pow(2, level + 2);
+        computePositions(node.left, x - offset, y + verticalSpacing, level + 1);
+      }
+      if (node.right) {
+        let offset = canvas.width / Math.pow(2, level + 2);
+        computePositions(node.right, x + offset, y + verticalSpacing, level + 1);
+      }
+    }
+
+    // Atualiza as posições da árvore (caso a árvore não esteja vazia)
+    function computePositionsForTree() {
+      if (tree) {
+        computePositions(tree, canvas.width / 2, 50, 0);
+      }
+    }
+
+    // Função que simula o algoritmo de inserção na BST e retorna o spot correto para o novo nó.
+    // Retorna um objeto: { parent, side, x, y, level }
+    function findInsertionSpot(root, value) {
+      // Se a árvore estiver vazia, a inserção será na raiz
+      if (!root) {
+        return { parent: null, side: null, x: canvas.width / 2, y: 50, level: 0 };
+      }
+      let current = root;
+      while (true) {
+        if (value < current.value) {
+          if (!current.left) {
+            let offset = canvas.width / Math.pow(2, current.level + 2);
+            return { parent: current, side: 'left', x: current.x - offset, y: current.y + verticalSpacing, level: current.level + 1 };
+          } else {
+            current = current.left;
+          }
+        } else if (value > current.value) {
+          if (!current.right) {
+            let offset = canvas.width / Math.pow(2, current.level + 2);
+            return { parent: current, side: 'right', x: current.x + offset, y: current.y + verticalSpacing, level: current.level + 1 };
+          } else {
+            current = current.right;
+          }
+        } else {
+          // Não deve ocorrer: valores duplicados não são permitidos
+          return null;
+        }
+      }
+    }
+
+    // Insere o novo nó na posição indicada (usado quando o jogador acerta)
+    function insertAtSpot(spot, value) {
+      if (spot.parent === null) {
+        tree = newNode(value);
+      } else {
+        if (spot.side === 'left') {
+          spot.parent.left = newNode(value);
+        } else if (spot.side === 'right') {
+          spot.parent.right = newNode(value);
+        }
+      }
+    }
+
+    // ===============================
+    // Funções de desenho no canvas
+    // ===============================
+
+    // Desenha um nó (círculo com valor)
+    function drawNode(node) {
+      ctx.beginPath();
+      ctx.arc(node.x, node.y, nodeRadius, 0, Math.PI * 2);
+      ctx.fillStyle = "#89CFF0";
+      ctx.fill();
+      ctx.strokeStyle = "#333";
+      ctx.stroke();
+      ctx.fillStyle = "#000";
+      ctx.font = "14px Arial";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(node.value, node.x, node.y);
+    }
+
+    // Desenha uma linha ligando dois pontos (pai e filho)
+    function drawLine(x1, y1, x2, y2) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.strokeStyle = "#333";
+      ctx.stroke();
+    }
+
+    // Desenha um “spot” para inserção (círculo tracejado)
+    // Se este spot for o correto para a inserção atual, desenha-o em destaque (por exemplo, verde).
+    function drawEmptySpot(x, y, parent, side) {
+      ctx.beginPath();
+      ctx.setLineDash([5, 3]);  // linha tracejada
+      ctx.arc(x, y, nodeRadius, 0, Math.PI * 2);
+      
+      // Verifica se este é o spot correto
+      if (currentInsertionSpot &&
+          currentInsertionSpot.parent === parent &&
+          currentInsertionSpot.side === side) {
+        ctx.strokeStyle = "green";
+        ctx.lineWidth = 3;
+      } else {
+        ctx.strokeStyle = "#aaa";
+        ctx.lineWidth = 1;
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);  // reseta para linha contínua
+    }
+
+    // Função recursiva que desenha a árvore:
+    // - Desenha linhas entre pai e filho;
+    // - Para cada nó, se um filho estiver ausente, desenha o spot vazio.
+    function drawTree(node) {
+      // Desenha os ramos e os spots para os filhos
+      if (node.left) {
+        drawLine(node.x, node.y, node.left.x, node.left.y);
+        drawTree(node.left);
+      } else {
+        let offset = canvas.width / Math.pow(2, node.level + 2);
+        drawEmptySpot(node.x - offset, node.y + verticalSpacing, node, 'left');
+      }
+      if (node.right) {
+        drawLine(node.x, node.y, node.right.x, node.right.y);
+        drawTree(node.right);
+      } else {
+        let offset = canvas.width / Math.pow(2, node.level + 2);
+        drawEmptySpot(node.x + offset, node.y + verticalSpacing, node, 'right');
+      }
+      // Desenha o nó atual por cima das linhas
+      drawNode(node);
+    }
+
+    // Função que limpa e redesenha o canvas
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      computePositionsForTree();
+      if (tree) {
+        drawTree(tree);
+      } else {
+        // Se a árvore estiver vazia, desenha o spot para a raiz
+        drawEmptySpot(canvas.width / 2, 50, null, null);
+      }
+    }
+
+    // ===============================
+    // Funções do Jogo
+    // ===============================
+
+    // Gera um novo valor alvo para inserção (entre 10 e 99, evitando duplicatas)
+    function generateTarget() {
+      let val;
+      do {
+        val = Math.floor(Math.random() * 90) + 10;
+      } while (treeContains(tree, val));
+      currentTarget = val;
+      document.getElementById("targetValue").textContent = currentTarget;
+      // Recalcula as posições e o spot correto para inserção
+      computePositionsForTree();
+      currentInsertionSpot = findInsertionSpot(tree, currentTarget);
+    }
+
+    // Inicia o jogo: cria uma árvore inicial e gera o primeiro valor alvo.
+    function startGame() {
+      // Exemplo: árvore pré-populada com alguns nós
+      tree = null;
+      const valoresIniciais = [50, 30, 70, 20, 40, 60, 80];
+      valoresIniciais.forEach(val => {
+        tree = insertNode(tree, val);
+      });
+      generateTarget();
+      draw();
+      document.getElementById("message").textContent = "";
+    }
+
+    // ===============================
+    // Eventos do usuário
+    // ===============================
+    // Clique no canvas: verifica se o clique está próximo do spot correto
+    canvas = document.getElementById("treeCanvas");
+    ctx = canvas.getContext("2d");
+
+    canvas.addEventListener('click', function (e) {
+      if (!gameStarted) return;
+      const rect = canvas.getBoundingClientRect();
+      const clickX = e.clientX - rect.left;
+      const clickY = e.clientY - rect.top;
+      // Verifica se o clique está dentro do raio do spot correto
+      const dx = clickX - currentInsertionSpot.x;
+      const dy = clickY - currentInsertionSpot.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance <= nodeRadius) {
+        // Acertou! Insere o novo nó
+        insertAtSpot(currentInsertionSpot, currentTarget);
+        document.getElementById("message").textContent = "Correto!";
+        // Gera um novo valor alvo e redesenha a árvore
+        generateTarget();
+        draw();
+      } else {
+        document.getElementById("message").textContent = "Incorreto! Tente novamente.";
+      }
+    });
+
+    // Botão de Iniciar
+    document.getElementById("startButton").addEventListener('click', function () {
+      gameStarted = true;
+      startGame();
+    });
+
+    // Botão de Reiniciar: limpa a tela e a árvore
+    document.getElementById("resetButton").addEventListener('click', function () {
+      gameStarted = false;
+      tree = null;
+      currentTarget = null;
+      currentInsertionSpot = null;
+      document.getElementById("message").textContent = "";
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      document.getElementById("targetValue").textContent = "?";
+    });
+
+    // ===============================
+    // Inicialização na carga da página
+    // ===============================
+    window.onload = function () {
+      canvas = document.getElementById("treeCanvas");
+      ctx = canvas.getContext("2d");
+      // Exibe inicialmente o canvas vazio (pronto para iniciar)
+      draw();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,86 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100..900;1,100..900&display=swap');
+
+:root {
+    --bg-color: #484848;
+    --primary-color: #8cb31a;
+    --text-primary-color: #203000;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-color);
+    width: 100vw;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-family: "Roboto", sans-serif;
+}
+
+article {
+    width: 300px;
+    background-color: #fff;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 20px;
+    border-radius: 5px;
+    
+    & .imagem-produto {
+        height: 320px;
+
+        & img {
+            display: block;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+    }
+
+    & .info-produto {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        & p {
+            font-size: 1rem;
+            color: #333;
+        }
+
+        & .separador {
+            width: 20px;
+            height: 2px;
+            background-color: #eee;
+        }
+
+        & .rodape {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+
+            & .preco-produto {
+                font-size: 1rem;
+                color: #777;
+            }
+
+            & .btn-adicionar {
+                all: unset;
+                width: 100px;
+                height: 30px;
+                border-radius: 5px;
+                font-size: 1rem;
+                color: var(--text-primary-color);
+                background-color: var(--primary-color);
+                text-align: center;
+                cursor: pointer;
+            }
+        }
+    }
+
+}
